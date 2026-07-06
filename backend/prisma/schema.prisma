@@ -1,0 +1,268 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum VideoStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum VideoVisibility {
+  PUBLIC
+  PRIVATE
+  FRIENDS
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String    @map("password_hash")
+  role          Role      @default(USER)
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  profile       Profile?
+  videos        Video[]
+  likes         Like[]
+  comments      Comment[]
+  followers     Follow[]  @relation("Following")
+  following     Follow[]  @relation("Follower")
+  sentRequests  Friendship[] @relation("SentRequests")
+  recvRequests  Friendship[] @relation("RecvRequests")
+  locations     Location[]
+  messages      Message[]
+  conversationMembers ConversationMember[]
+  reports       Report[]  @relation("Reporter")
+  adminLogs     AdminLog[]
+
+  @@map("users")
+}
+
+model Profile {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  displayName     String?  @map("display_name")
+  bio             String?
+  avatarUrl       String?  @map("avatar_url")
+  isPrivate       Boolean  @default(false) @map("is_private")
+  shareLocation   Boolean  @default(false) @map("share_location")
+  notifyMessages  Boolean  @default(true) @map("notify_messages")
+  notifyLikes     Boolean  @default(true) @map("notify_likes")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Video {
+  id           String          @id @default(uuid())
+  userId       String          @map("user_id")
+  title        String
+  description  String?
+  objectKey    String?         @map("object_key")
+  thumbnailKey String?         @map("thumbnail_key")
+  durationSec  Float?          @map("duration_sec")
+  sizeBytes    BigInt          @default(0) @map("size_bytes")
+  status       VideoStatus     @default(PENDING)
+  visibility   VideoVisibility @default(PUBLIC)
+  viewCount    Int             @default(0) @map("view_count")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hashtags VideoHashtag[]
+  likes    Like[]
+  comments Comment[]
+  reports  Report[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([status])
+  @@map("videos")
+}
+
+model Hashtag {
+  id     String         @id @default(uuid())
+  name   String         @unique
+  videos VideoHashtag[]
+
+  @@map("hashtags")
+}
+
+model VideoHashtag {
+  videoId   String @map("video_id")
+  hashtagId String @map("hashtag_id")
+
+  video   Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  hashtag Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, hashtagId])
+  @@map("video_hashtags")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  videoId   String   @map("video_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@map("likes")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  videoId   String   @map("video_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+  @@map("comments")
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model Friendship {
+  id         String           @id @default(uuid())
+  senderId   String           @map("sender_id")
+  receiverId String           @map("receiver_id")
+  status     FriendshipStatus @default(PENDING)
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  sender   User @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("RecvRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@map("friendships")
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  latitude  Float
+  longitude Float
+  label     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("locations")
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members  ConversationMember[]
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  userId         String   @map("user_id")
+  lastReadAt     DateTime? @map("last_read_at")
+  joinedAt       DateTime @default(now()) @map("joined_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String   @id @default(uuid())
+  conversationId String   @map("conversation_id")
+  senderId       String   @map("sender_id")
+  content        String?
+  gifUrl         String?  @map("gif_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  reporterId  String   @map("reporter_id")
+  videoId     String?  @map("video_id")
+  reason      String
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  reporter User   @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  video    Video? @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@map("reports")
+}
+
+model AdminLog {
+  id        String   @id @default(uuid())
+  adminId   String   @map("admin_id")
+  action    String
+  target    String?
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("admin_logs")
+}
+
+model StorageStats {
+  id           String   @id @default("global")
+  videoBytes   BigInt   @default(0) @map("video_bytes")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("storage_stats")
+}

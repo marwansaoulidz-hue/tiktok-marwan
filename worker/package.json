@@ -1,0 +1,22 @@
+{
+  "name": "social-video-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0",
+    "bullmq": "^5.34.3",
+    "fluent-ffmpeg": "^2.1.2",
+    "ioredis": "^5.4.2",
+    "minio": "^8.0.2"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/node": "^22.10.2",
+    "prisma": "^6.1.0",
+    "typescript": "^5.7.2"
+  }
+}

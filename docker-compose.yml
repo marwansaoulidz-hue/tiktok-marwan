@@ -1,0 +1,169 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-socialapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong_password}
+      POSTGRES_DB: ${POSTGRES_DB:-socialapp}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-socialapp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change_me_minio_password}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      mc mb local/$${MINIO_BUCKET} --ignore-existing;
+      mc anonymous set download local/$${MINIO_BUCKET}/thumbnails;
+      exit 0;
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change_me_minio_password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-videos}
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-socialapp}:${POSTGRES_PASSWORD:-change_me_strong_password}@postgres:5432/${POSTGRES_DB:-socialapp}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET:-change_me_jwt_secret_min_32_chars_long}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change_me_minio_password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-videos}
+      MINIO_USE_SSL: "false"
+      GIPHY_API_KEY: ${GIPHY_API_KEY:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@localhost}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change_me_admin_password}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      VIDEO_STORAGE_LIMIT_GB: ${VIDEO_STORAGE_LIMIT_GB:-150}
+      PLATFORM_STORAGE_LIMIT_GB: ${PLATFORM_STORAGE_LIMIT_GB:-180}
+      MAX_VIDEOS_PER_USER: ${MAX_VIDEOS_PER_USER:-50}
+      MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-45}
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-100}
+      NODE_ENV: production
+    volumes:
+      - api_uploads:/tmp/uploads
+    command: >
+      sh -c "
+        while ! nc -z postgres 5432; do
+          echo 'En attente de la base de données...';
+          sleep 2;
+        done;
+        echo 'Base de données prête, migration Prisma';
+        npx prisma migrate deploy &&
+        npx prisma db seed &&
+        npm run start:prod
+      "
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-socialapp}:${POSTGRES_PASSWORD:-change_me_strong_password}@postgres:5432/${POSTGRES_DB:-socialapp}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change_me_minio_password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-videos}
+      MINIO_USE_SSL: "false"
+      MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-45}
+    volumes:
+      - api_uploads:/tmp/uploads
+    command: >
+      sh -c "
+        while ! nc -z postgres 5432; do
+          echo 'En attente de la base de données...';
+          sleep 2;
+        done;
+        echo 'Base de données prête';
+        npm run start
+      "
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NODE_ENV: production
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  api_uploads:
