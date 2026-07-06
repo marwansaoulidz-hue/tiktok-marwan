@@ -71,13 +71,6 @@ services:
     restart: always
     ports:
       - "3001:3001"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-socialapp}:${POSTGRES_PASSWORD:-change_me_strong_password}@postgres:5432/${POSTGRES_DB:-socialapp}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
@@ -101,6 +94,13 @@ services:
       NODE_ENV: production
     volumes:
       - api_uploads:/tmp/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     command: >
       sh -c "
         while ! nc -z postgres 5432; do
@@ -118,13 +118,6 @@ services:
       context: ./worker
       dockerfile: Dockerfile
     restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-socialapp}:${POSTGRES_PASSWORD:-change_me_strong_password}@postgres:5432/${POSTGRES_DB:-socialapp}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
@@ -137,6 +130,13 @@ services:
       MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-45}
     volumes:
       - api_uploads:/tmp/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     command: >
       sh -c "
         while ! nc -z postgres 5432; do
@@ -156,11 +156,11 @@ services:
     restart: always
     ports:
       - "3000:3000"
-    depends_on:
-      - api
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
       NODE_ENV: production
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
