@@ -5,7 +5,7 @@ WORKDIR /app
 RUN apk add --no-cache curl netcat-openbsd
 
 COPY package*.json ./
-RUN npm install --only=production
+RUN npm install
 
 COPY prisma ./prisma
 RUN npx prisma generate

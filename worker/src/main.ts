@@ -1,5 +1,4 @@
 import { Worker, Job } from 'bullmq';
-import IORedis from 'ioredis';
 import { PrismaClient } from '@prisma/client';
 import * as Minio from 'minio';
 import * as ffmpeg from 'fluent-ffmpeg';
@@ -7,9 +6,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const prisma = new PrismaClient();
-const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+const connection = {
+  host: process.env.REDIS_HOST || 'redis',
+  port: parseInt(process.env.REDIS_PORT || '6379', 10),
   maxRetriesPerRequest: null,
-});
+};
 
 const minioClient = new Minio.Client({
   endPoint: process.env.MINIO_ENDPOINT || 'localhost',
@@ -159,6 +160,5 @@ worker.on('failed', (job, err) => {
 process.on('SIGTERM', async () => {
   await worker.close();
   await prisma.$disconnect();
-  await connection.quit();
   process.exit(0);
 });
