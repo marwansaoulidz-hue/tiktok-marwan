@@ -209,7 +209,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {activeTab === 'storage' &&存储 && (
+              {activeTab === 'storage' && storage && (
                 <div>
                   <h2 className="text-xl font-bold mb-4">Stockage</h2>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
