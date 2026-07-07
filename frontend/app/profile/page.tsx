@@ -5,15 +5,15 @@ import { useRouter } from 'next/navigation';
 
 export default function MyProfileRedirect() {
   const router = useRouter();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (user.id) {
       router.replace(`/profile/${user.id}`);
     } else {
       router.replace('/login');
     }
-  }, [router, user.id]);
+  }, [router]);
 
   return null;
 }

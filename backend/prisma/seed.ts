@@ -43,8 +43,6 @@ async function main() {
       data: {
         id: 'global',
         videoBytes: BigInt(0),
-        userCount: 0,
-        videoCount: 0,
       },
     });
     console.log('Storage stats initialized');

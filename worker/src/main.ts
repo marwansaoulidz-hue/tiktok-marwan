@@ -1,7 +1,7 @@
 import { Worker, Job } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
 import * as Minio from 'minio';
-import * as ffmpeg from 'fluent-ffmpeg';
+import ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs';
 import * as path from 'path';
 

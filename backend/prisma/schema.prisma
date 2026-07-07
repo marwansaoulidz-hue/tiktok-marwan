@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -63,7 +63,7 @@ model Profile {
   id              String   @id @default(uuid())
   userId          String   @unique @map("user_id")
   displayName     String?  @map("display_name")
-  bio             String?
+  bio             String?  @db.Text
   avatarUrl       String?  @map("avatar_url")
   isPrivate       Boolean  @default(false) @map("is_private")
   shareLocation   Boolean  @default(false) @map("share_location")
@@ -81,7 +81,7 @@ model Video {
   id           String          @id @default(uuid())
   userId       String          @map("user_id")
   title        String
-  description  String?
+  description  String?         @db.Text
   objectKey    String?         @map("object_key")
   thumbnailKey String?         @map("thumbnail_key")
   durationSec  Float?          @map("duration_sec")
@@ -140,7 +140,7 @@ model Comment {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
   videoId   String   @map("video_id")
-  content   String
+  content   String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -221,7 +221,7 @@ model Message {
   id             String   @id @default(uuid())
   conversationId String   @map("conversation_id")
   senderId       String   @map("sender_id")
-  content        String?
+  content        String?  @db.Text
   gifUrl         String?  @map("gif_url")
   createdAt      DateTime @default(now()) @map("created_at")
 
@@ -236,7 +236,7 @@ model Report {
   id          String   @id @default(uuid())
   reporterId  String   @map("reporter_id")
   videoId     String?  @map("video_id")
-  reason      String
+  reason      String   @db.Text
   status      String   @default("OPEN")
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -251,7 +251,7 @@ model AdminLog {
   adminId   String   @map("admin_id")
   action    String
   target    String?
-  details   String?
+  details   String?  @db.Text
   createdAt DateTime @default(now()) @map("created_at")
 
   admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
@@ -260,7 +260,7 @@ model AdminLog {
 }
 
 model StorageStats {
-  id           String   @id @default("global")
+  id           String   @id
   videoBytes   BigInt   @default(0) @map("video_bytes")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

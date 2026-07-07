@@ -15,7 +15,8 @@ Application web sociale auto-hébergée orientée vidéos courtes, avec feed, pr
 ## Stack Technique
 
 - **Frontend** : Next.js 14, React, TailwindCSS, Lucide Icons
-- **Backend** : NestJS, Prisma, PostgreSQL
+- **Backend** : NestJS, Prisma, MySQL
+- **Administration BDD** : phpMyAdmin
 - **Stockage** : MinIO (S3-compatible)
 - **Cache** : Redis
 - **Transcodage** : FFmpeg (via worker BullMQ)
@@ -31,19 +32,23 @@ Application web sociale auto-hébergée orientée vidéos courtes, avec feed, pr
 ## Installation
 
 1. **Cloner le repository**
+
 ```bash
 git clone <repository-url>
 cd social-video-app
 ```
 
 2. **Configurer l'environnement**
+
 ```bash
 cp .env.example .env
 ```
 
 Éditez `.env` avec vos valeurs :
+
 ```env
-POSTGRES_PASSWORD=change_me_strong_password
+MYSQL_PASSWORD=change_me_strong_password
+MYSQL_ROOT_PASSWORD=change_me_root_password
 MINIO_ROOT_PASSWORD=change_me_minio_password
 JWT_SECRET=change_me_jwt_secret_min_32_chars_long
 ADMIN_PASSWORD=change_me_admin_password
@@ -51,17 +56,20 @@ GIPHY_API_KEY=your_giphy_api_key  # Optionnel
 ```
 
 3. **Lancer l'application**
+
 ```bash
 docker-compose up -d --build
 ```
 
 4. **Accéder à l'application**
-- Frontend : http://localhost:3000
-- API : http://localhost:3001
-- PostgreSQL : localhost:5433
-- Redis : localhost:6380
-- MinIO : http://localhost:9000
-- MinIO Console : http://localhost:9001
+
+- Frontend : http://localhost:4000
+- API : http://localhost:4001
+- MySQL : localhost:3307
+- phpMyAdmin : http://localhost:5050
+- Redis : localhost:6390
+- MinIO : http://localhost:9100
+- MinIO Console : http://localhost:9101
 
 ## Utilisateur Admin par défaut
 
@@ -72,38 +80,35 @@ docker-compose up -d --build
 **Important** : Changez le mot de passe admin après le premier démarrage !
 
 ## Structure du Projet
-
-```
 social-video-app/
-├── backend/          # API NestJS
-│   ├── src/
-│   │   ├── auth/     # Authentification JWT
-│   │   ├── users/    # Gestion utilisateurs
-│   │   ├── videos/   # Upload et gestion vidéos
-│   │   ├── social/   # Likes, commentaires, abonnements
-│   │   ├── messages/ # Messagerie temps réel
-│   │   ├── locations/# Partage de position
-│   │   ├── admin/    # Administration
-│   │   ├── search/   # Recherche
-│   │   ├── storage/  # MinIO client
-│   │   └── queue/    # BullMQ pour jobs
-│   └── prisma/
-│       └── schema.prisma
-├── worker/           # Worker transcodage vidéo FFmpeg
-│   └── src/main.ts
-├── frontend/         # Next.js
-│   └── app/
-│       ├── feed/     # Page feed principal
-│       ├── upload/   # Page upload vidéo
-│       ├── search/   # Page recherche
-│       ├── messages/ # Page messagerie
-│       ├── map/      # Page carte amis
-│       ├── profile/  # Page profil
-│       ├── admin/    # Page admin
-│       └── settings/ # Page paramètres
-├── nginx/            # Configuration Nginx
+├── backend/ # API NestJS
+│ ├── src/
+│ │ ├── auth/ # Authentification JWT
+│ │ ├── users/ # Gestion utilisateurs
+│ │ ├── videos/ # Upload et gestion vidéos
+│ │ ├── social/ # Likes, commentaires, abonnements
+│ │ ├── messages/ # Messagerie temps réel
+│ │ ├── locations/# Partage de position
+│ │ ├── admin/ # Administration
+│ │ ├── search/ # Recherche
+│ │ ├── storage/ # MinIO client
+│ │ └── queue/ # BullMQ pour jobs
+│ └── prisma/
+│ └── schema.prisma
+├── worker/ # Worker transcodage vidéo FFmpeg
+│ └── src/main.ts
+├── frontend/ # Next.js
+│ └── app/
+│ ├── feed/ # Page feed principal
+│ ├── upload/ # Page upload vidéo
+│ ├── search/ # Page recherche
+│ ├── messages/ # Page messagerie
+│ ├── map/ # Page carte amis
+│ ├── profile/ # Page profil
+│ ├── admin/ # Page admin
+│ └── settings/ # Page paramètres
+├── nginx/ # Configuration Nginx
 └── docker-compose.yml
-```
 
 ## Limites de Stockage
 
@@ -120,6 +125,7 @@ social-video-app/
 ## Commandes Utiles
 
 ### Voir les logs
+
 ```bash
 docker-compose logs -f api
 docker-compose logs -f worker
@@ -127,29 +133,48 @@ docker-compose logs -f frontend
 ```
 
 ### Redémarrer un service
+
 ```bash
 docker-compose restart api
 ```
 
 ### Arrêter tout
+
 ```bash
 docker-compose down
 ```
 
 ### Supprimer les volumes (attention, données perdues)
+
 ```bash
 docker-compose down -v
 ```
 
 ### Sauvegarde de la base de données
+
 ```bash
-docker-compose exec postgres pg_dump -U socialapp socialapp > backup.sql
+docker-compose exec mysql mysqldump -u socialapp -p socialapp > backup.sql
 ```
 
 ### Restauration de la base de données
+
 ```bash
-cat backup.sql | docker-compose exec -T postgres psql -U socialapp socialapp
+cat backup.sql | docker-compose exec -T mysql mysql -u socialapp -p socialapp
 ```
+
+### Générer une nouvelle migration Prisma
+
+```bash
+cd backend
+npx prisma migrate dev --name nom_de_la_migration
+```
+
+## Accès phpMyAdmin
+
+Interface web d'administration de la base de données MySQL :
+1. Ouvrez http://localhost:5050
+2. La connexion se fait automatiquement grâce aux identifiants configurés dans `.env`
+3. Vous pouvez explorer les tables, exécuter des requêtes SQL et gérer les données directement
 
 ## Configuration Giphy (Optionnel)
 
@@ -162,6 +187,7 @@ Pour activer les GIF dans la messagerie :
 ## Développement
 
 ### Backend (NestJS)
+
 ```bash
 cd backend
 npm install
@@ -169,6 +195,7 @@ npm run start:dev
 ```
 
 ### Frontend (Next.js)
+
 ```bash
 cd frontend
 npm install
@@ -176,6 +203,7 @@ npm run dev
 ```
 
 ### Worker
+
 ```bash
 cd worker
 npm install

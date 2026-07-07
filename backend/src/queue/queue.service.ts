@@ -1,17 +1,19 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import IORedis from 'ioredis';
 
 @Injectable()
 export class QueueService implements OnModuleDestroy {
-  private connection: IORedis;
   public videoQueue: Queue;
 
   constructor() {
-    this.connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
-      maxRetriesPerRequest: null,
+    const redisUrl = new URL(process.env.REDIS_URL || 'redis://localhost:6379');
+    this.videoQueue = new Queue('video-transcode', {
+      connection: {
+        host: redisUrl.hostname,
+        port: parseInt(redisUrl.port || '6379', 10),
+        maxRetriesPerRequest: null,
+      },
     });
-    this.videoQueue = new Queue('video-transcode', { connection: this.connection });
   }
 
   async addVideoJob(videoId: string, inputPath: string) {
@@ -23,6 +25,5 @@ export class QueueService implements OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.videoQueue.close();
-    await this.connection.quit();
   }
 }

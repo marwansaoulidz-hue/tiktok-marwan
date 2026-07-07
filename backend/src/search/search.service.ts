@@ -14,8 +14,8 @@ export class SearchService {
         where: {
           isActive: true,
           OR: [
-            { username: { contains: query, mode: 'insensitive' } },
-            { profile: { displayName: { contains: query, mode: 'insensitive' } } },
+            { username: { contains: query } },
+            { profile: { displayName: { contains: query } } },
           ],
         },
         take: 20,
@@ -25,13 +25,13 @@ export class SearchService {
         where: {
           status: 'READY',
           visibility: 'PUBLIC',
-          title: { contains: query, mode: 'insensitive' },
+          title: { contains: query },
         },
         take: 20,
         include: { user: { include: { profile: true } }, _count: { select: { likes: true } } },
       }),
       this.prisma.hashtag.findMany({
-        where: { name: { contains: query.toLowerCase(), mode: 'insensitive' } },
+        where: { name: { contains: query.toLowerCase() } },
         take: 20,
         include: { _count: { select: { videos: true } } },
       }),

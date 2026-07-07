@@ -23,7 +23,7 @@ export class VideosController {
 
   @Get(':id')
   getVideo(@Param('id') id: string, @Request() req: any) {
-    return this.videos.getVideo(id, this.extractUserId(req));
+    return this.videos.getVideo(id, this.extractUserId(req) ?? undefined);
   }
 
   @UseGuards(JwtAuthGuard)

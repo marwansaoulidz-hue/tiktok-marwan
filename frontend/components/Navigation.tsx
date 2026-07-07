@@ -1,12 +1,18 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Home, Search, Plus, MessageSquare, Map, User, LogOut, Shield } from 'lucide-react';
 
 export default function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const [user, setUser] = useState<any>({});
+
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    setUser(storedUser);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

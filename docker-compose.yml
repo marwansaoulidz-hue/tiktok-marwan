@@ -1,26 +1,41 @@
 services:
-  postgres:
-    image: postgres:16-alpine
+  mysql:
+    image: mysql:8.0
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-socialapp}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_strong_password}
-      POSTGRES_DB: ${POSTGRES_DB:-socialapp}
+      MYSQL_USER: ${MYSQL_USER:-socialapp}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me_strong_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me_root_password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-socialapp}
     ports:
-      - "5433:5432"
+      - "3308:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-socialapp}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-change_me_root_password}"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${MYSQL_USER:-socialapp}
+      PMA_PASSWORD: ${MYSQL_PASSWORD:-change_me_strong_password}
+    ports:
+      - "5050:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
     restart: always
     ports:
-      - "6380:6379"
+      - "6390:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -37,8 +52,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change_me_minio_password}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9100:9000"
+      - "9101:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -70,9 +85,9 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "3001:3001"
+      - "4001:3001"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-socialapp}:${POSTGRES_PASSWORD:-change_me_strong_password}@postgres:5432/${POSTGRES_DB:-socialapp}
+      DATABASE_URL: mysql://${MYSQL_USER:-socialapp}:${MYSQL_PASSWORD:-change_me_strong_password}@mysql:3306/${MYSQL_DATABASE:-socialapp}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_jwt_secret_min_32_chars_long}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
@@ -95,7 +110,7 @@ services:
     volumes:
       - api_uploads:/tmp/uploads
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -103,7 +118,7 @@ services:
         condition: service_healthy
     command: >
       sh -c "
-        while ! nc -z postgres 5432; do
+        while ! nc -z mysql 3306; do
           echo 'En attente de la base de données...';
           sleep 2;
         done;
@@ -119,7 +134,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-socialapp}:${POSTGRES_PASSWORD:-change_me_strong_password}@postgres:5432/${POSTGRES_DB:-socialapp}
+      DATABASE_URL: mysql://${MYSQL_USER:-socialapp}:${MYSQL_PASSWORD:-change_me_strong_password}@mysql:3306/${MYSQL_DATABASE:-socialapp}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
@@ -131,7 +146,7 @@ services:
     volumes:
       - api_uploads:/tmp/uploads
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -139,7 +154,7 @@ services:
         condition: service_healthy
     command: >
       sh -c "
-        while ! nc -z postgres 5432; do
+        while ! nc -z mysql 3306; do
           echo 'En attente de la base de données...';
           sleep 2;
         done;
@@ -152,18 +167,18 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
     restart: always
     ports:
-      - "3000:3000"
+      - "4000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4001}
       NODE_ENV: production
     depends_on:
       - api
 
 volumes:
-  postgres_data:
+  mysql_data:
   redis_data:
   minio_data:
   api_uploads:

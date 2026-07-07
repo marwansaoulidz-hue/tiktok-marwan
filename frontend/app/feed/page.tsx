@@ -95,7 +95,7 @@ export default function FeedPage() {
                 onScroll={() => handleScroll(index)}
               >
                 <video
-                  ref={el => videoRefs.current[index] = el}
+                  ref={(el) => { videoRefs.current[index] = el; }}
                   src={video.videoUrl}
                   className="h-full w-full object-cover"
                   loop

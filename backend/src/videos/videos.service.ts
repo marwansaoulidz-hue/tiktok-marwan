@@ -135,8 +135,8 @@ export class VideosService {
   }
 
   private async formatVideo(video: any, liked: boolean) {
-    let videoUrl = null;
-    let thumbnailUrl = null;
+    let videoUrl: string | null = null;
+    let thumbnailUrl: string | null = null;
     if (video.objectKey) videoUrl = await this.storage.getPresignedUrl(video.objectKey, 3600);
     if (video.thumbnailKey) thumbnailUrl = await this.storage.getPresignedUrl(video.thumbnailKey, 3600);
 
