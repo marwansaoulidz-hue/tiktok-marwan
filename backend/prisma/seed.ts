@@ -8,44 +8,51 @@ async function main() {
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
   const adminUsername = process.env.ADMIN_USERNAME || 'admin';
 
-  const existingAdmin = await prisma.user.findFirst({
-    where: { email: adminEmail },
-  });
+  try {
+    const existingAdmin = await prisma.user.findFirst({
+      where: { email: adminEmail },
+    });
 
-  if (!existingAdmin) {
-    const passwordHash = await argon2.hash(adminPassword);
-    const admin = await prisma.user.create({
-      data: {
-        email: adminEmail,
-        username: adminUsername,
-        passwordHash,
-        role: 'ADMIN',
-        isActive: true,
-        profile: {
-          create: {
-            displayName: 'Admin',
+    if (!existingAdmin) {
+      const passwordHash = await argon2.hash(adminPassword);
+      const admin = await prisma.user.create({
+        data: {
+          email: adminEmail,
+          username: adminUsername,
+          passwordHash,
+          role: 'ADMIN',
+          isActive: true,
+          profile: {
+            create: {
+              displayName: 'Admin',
+            },
           },
         },
-      },
-    });
-    console.log('Admin user created:', admin.username);
-  } else {
-    console.log('Admin user already exists');
+      });
+      console.log('Admin user created:', admin.username);
+    } else {
+      console.log('Admin user already exists');
+    }
+  } catch (error) {
+    console.warn('Admin seed skipped:', error);
   }
 
-  // Initialize storage stats
-  const existingStats = await prisma.storageStats.findUnique({
-    where: { id: 'global' },
-  });
-
-  if (!existingStats) {
-    await prisma.storageStats.create({
-      data: {
-        id: 'global',
-        videoBytes: BigInt(0),
-      },
+  try {
+    const existingStats = await prisma.storageStats.findUnique({
+      where: { id: 'global' },
     });
-    console.log('Storage stats initialized');
+
+    if (!existingStats) {
+      await prisma.storageStats.create({
+        data: {
+          id: 'global',
+          videoBytes: BigInt(0),
+        },
+      });
+      console.log('Storage stats initialized');
+    }
+  } catch (error) {
+    console.warn('Storage stats seed skipped:', error);
   }
 }
 

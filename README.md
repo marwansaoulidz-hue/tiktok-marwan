@@ -35,30 +35,23 @@ Application web sociale auto-hébergée orientée vidéos courtes, avec feed, pr
 
 ```bash
 git clone <repository-url>
-cd social-video-app
+cd tiktok-marwan
 ```
 
 2. **Configurer l'environnement**
 
-```bash
-cp .env.example .env
-```
-
-Éditez `.env` avec vos valeurs :
-
-```env
-MYSQL_PASSWORD=change_me_strong_password
-MYSQL_ROOT_PASSWORD=change_me_root_password
-MINIO_ROOT_PASSWORD=change_me_minio_password
-JWT_SECRET=change_me_jwt_secret_min_32_chars_long
-ADMIN_PASSWORD=change_me_admin_password
-GIPHY_API_KEY=your_giphy_api_key  # Optionnel
-```
+Le fichier [.env](.env) est déjà présent avec des valeurs de départ. Vous pouvez l'ajuster si besoin.
 
 3. **Lancer l'application**
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
+```
+
+4. **Si vous voulez repartir de zéro sur la base de données**
+
+```bash
+RESET_DB=true docker compose up -d --build
 ```
 
 4. **Accéder à l'application**

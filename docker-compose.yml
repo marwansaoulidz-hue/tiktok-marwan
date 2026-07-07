@@ -107,6 +107,7 @@ services:
       MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-45}
       MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-100}
       NODE_ENV: production
+      RESET_DB: ${RESET_DB:-false}
     volumes:
       - api_uploads:/tmp/uploads
     depends_on:
@@ -122,9 +123,14 @@ services:
           echo 'En attente de la base de données...';
           sleep 2;
         done;
-        echo 'Base de données prête, migration Prisma';
-        npx prisma migrate deploy &&
-        npx prisma db seed &&
+        echo 'Base de données prête, synchronisation Prisma';
+        if [ \"$${RESET_DB}\" = \"true\" ]; then
+          npx prisma db push --accept-data-loss --force-reset;
+        else
+          npx prisma db push --accept-data-loss;
+        fi;
+        npx prisma db execute --file prisma/seed.sql 2>/dev/null || true;
+        npx prisma generate;
         npm run start:prod
       "
 
@@ -143,6 +149,7 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-videos}
       MINIO_USE_SSL: "false"
       MAX_VIDEO_DURATION_SEC: ${MAX_VIDEO_DURATION_SEC:-45}
+      RESET_DB: ${RESET_DB:-false}
     volumes:
       - api_uploads:/tmp/uploads
     depends_on:
@@ -159,6 +166,7 @@ services:
           sleep 2;
         done;
         echo 'Base de données prête';
+        npx prisma generate;
         npm run start
       "
 
